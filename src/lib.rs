@@ -4,8 +4,8 @@ mod word_id;
 use word_id::*;
 mod world_graph;
 use world_graph::*;
-mod id_to_word_map;
-use id_to_word_map::*;
+mod id_to_words_map;
+use id_to_words_map::*;
 
 fn find_N_cliques<const N: usize>(graph: WordGraph) -> Vec<[WordId; N]> {
     todo!("find cliques within this graph of size N")
@@ -14,7 +14,7 @@ fn find_N_cliques<const N: usize>(graph: WordGraph) -> Vec<[WordId; N]> {
 /// TODO: generalize over 5,5
 pub fn wordle_55(words: Vec<&str>) -> BTreeSet<[String; 5]> {
     // TODO: replace with id to words
-    let word_map = IdToWordMap::new(words);
+    let word_map = IdToWordsMap::from_iter(words);
     let graph = WordGraph::new(word_map.keys().cloned());
     let x = find_N_cliques::<5>(graph);
 
@@ -24,7 +24,7 @@ pub fn wordle_55(words: Vec<&str>) -> BTreeSet<[String; 5]> {
 //TODO: move tests to submodules
 #[cfg(test)]
 mod tests {
-    use crate::{wordle_55, IdToWordMap, WordGraph, WordId};
+    use crate::{id_to_words_map::IdToWordsMap, wordle_55, WordGraph, WordId};
 
     #[test]
     fn wordle_has_538_cliques_of_disjoint_words() {
@@ -37,7 +37,7 @@ mod tests {
     }
 
     #[test]
-    fn word_ids() {
+    fn word_id() {
         assert_eq!(*WordId::from("aaaaa"), 0b000000_00001);
         assert_eq!(*WordId::from("abcde"), 0b00000_11111);
         assert_eq!(*WordId::from("abcdf"), 0b00001_01111);
@@ -56,8 +56,8 @@ mod tests {
             // 0b1_00000_00000_01110_00000_00000
             // "zlmno" -> ["abcde"]
         ];
-        let id_to_word_map = IdToWordMap::new(test_words);
-        let word_graph = WordGraph::new(id_to_word_map.keys().cloned());
+        let id_to_words_map = IdToWordsMap::from_iter(test_words);
+        let word_graph = WordGraph::new(id_to_words_map.keys().cloned());
 
         assert_eq!(word_graph["abcde"].len(), 1, "abcde");
         assert_eq!(word_graph["awxyz"].len(), 0, "awxyz");
