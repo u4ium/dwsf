@@ -1,7 +1,7 @@
 //TODO: hierarchy
 use std::{
     collections::{BTreeMap, BTreeSet},
-    ops::Index,
+    ops::{Deref, Index},
 };
 
 use crate::word_id::WordId;
@@ -34,5 +34,13 @@ impl Index<&str> for WordGraph {
 
     fn index(&self, index: &str) -> &Self::Output {
         &self.0[&WordId::from(index)]
+    }
+}
+
+impl Deref for WordGraph {
+    type Target = BTreeMap<WordId, BTreeSet<WordId>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }

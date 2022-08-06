@@ -2,7 +2,7 @@
 
 use std::ops::Deref;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct WordId(u32);
 
 impl From<&str> for WordId {
