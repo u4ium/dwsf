@@ -1,50 +1,11 @@
 use itertools::Itertools;
 
 mod word_id;
-use word_id::*;
+use word_id::WordId;
 mod id_to_words_map;
-use id_to_words_map::*;
-
-pub struct CliqueFinder<const N: usize> {
-    word_ids: Vec<WordId>,
-    result: Vec<[WordId; N]>,
-    current: [WordId; N],
-}
-
-impl<const N: usize> CliqueFinder<N> {
-    #[inline]
-    pub fn new(word_ids: Vec<WordId>) -> Self {
-        Self {
-            word_ids,
-            result: Default::default(),
-            current: [Default::default(); N],
-        }
-    }
-
-    pub fn search(mut self) -> Vec<[WordId; N]> {
-        self.search_helper(0, 0);
-        self.result
-    }
-
-    fn search_helper(&mut self, start_index: usize, depth: usize) {
-        let rep = self
-            .current
-            .iter()
-            .take(depth)
-            .fold(0_u32, |a, &word_id| (a | *word_id));
-
-        for j in start_index..=self.word_ids.len() - (N - depth) {
-            if rep & *self.word_ids[j] == 0 {
-                self.current[depth] = self.word_ids[j];
-                if depth < N - 1 {
-                    self.search_helper(j + 1, depth + 1);
-                } else {
-                    self.result.push(self.current.clone());
-                }
-            }
-        }
-    }
-}
+use id_to_words_map::IdToWordsMap;
+mod clique_finder;
+use clique_finder::CliqueFinder;
 
 /// Find sets of N words (each with L distinct characters) that share no characters between them
 pub fn find_words_with_disjoint_character_sets<'a, const N: usize, const L: u32>(
@@ -66,7 +27,7 @@ pub fn find_words_with_disjoint_character_sets<'a, const N: usize, const L: u32>
 }
 
 // TODO: test
-// TODO: rename
+// TODO: rename/move
 // TODO: needs L=5? (string length)
 fn construct_result<const N: usize>(
     word_map: IdToWordsMap,
@@ -87,7 +48,6 @@ fn construct_result<const N: usize>(
         .collect()
 }
 
-// TODO: move tests to submodules
 #[cfg(test)]
 mod tests {
     use std::fs;
@@ -106,7 +66,7 @@ mod tests {
 
         assert_eq!(
             wordle_words.len(),
-            538,
+            15,
             "Matt Parker is a better programmer than I 😢"
         );
     }
