@@ -1,6 +1,5 @@
 use std::{collections::BTreeMap, ops::Deref};
 
-//TODO: hierarchy
 use crate::word_id::WordId;
 
 pub struct IdToWordsMap<'a>(BTreeMap<WordId, Vec<&'a str>>);
