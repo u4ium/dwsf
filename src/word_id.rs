@@ -43,3 +43,15 @@ impl Display for WordId {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn word_id() {
+        assert_eq!(*WordId::from("aaaaa"), 0b000000_00001);
+        assert_eq!(*WordId::from("abcde"), 0b00000_11111);
+        assert_eq!(*WordId::from("abcdf"), 0b00001_01111);
+    }
+}
