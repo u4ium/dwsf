@@ -1,97 +1,118 @@
-#![feature(map_first_last)]
-
 use itertools::Itertools;
 
 use std::collections::BTreeSet; // TODO: remove
 
 mod word_id;
 use word_id::*;
-mod word_graph;
-use word_graph::*;
 mod id_to_words_map;
 use id_to_words_map::*;
 
-fn find_cliques<const N: usize>(word_ids: &Vec<WordId>) -> Vec<[WordId; N]> {
-    let mut ret: Vec<BTreeSet<WordId>> = vec![];
-
-    for _ in 1..=5 {
-        ret = ret
-            .into_iter()
-            .map(|set| {
-                word_ids
-                    .iter()
-                    .filter_map(|key| {
-                        if key > set.last().unwrap_or(&WordId::default())
-                            && !set.iter().any(|word_id| (**key & **word_id) != 0)
-                        {
-                            let mut y = set.clone();
-                            y.insert(*key);
-                            Some(y)
-                        } else {
-                            None
-                        }
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .flatten()
-            .collect();
-    }
-
-    ret.into_iter()
-        .map(|set| {
-            set.into_iter()
-                .collect::<Vec<_>>()
-                .try_into()
-                .expect("must_have {N}")
-        })
-        .collect()
+pub struct CliqueFinder<const N: usize> {
+    word_ids: Vec<WordId>,
+    result: Vec<[WordId; N]>,
+    current: [WordId; N],
 }
 
-fn find_cliques_of_size_n<const N: usize>(graph: WordGraph) -> Vec<[WordId; N]> {
-    let mut ret: Vec<BTreeSet<WordId>> = graph.keys().map(|_k| BTreeSet::new()).collect();
-
-    for _ in 1..=5 {
-        ret = ret
-            .into_iter()
-            .map(|set| {
-                graph
-                    .keys()
-                    .filter_map(|key| {
-                        if key > set.last().unwrap_or(&WordId::default())
-                            && set.is_subset(graph.get(key).expect("graph has key"))
-                        {
-                            let mut y = set.clone();
-                            y.insert(*key);
-                            Some(y)
-                        } else {
-                            None
-                        }
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .flatten()
-            .collect();
+impl<const N: usize> CliqueFinder<N> {
+    pub fn new(word_ids: Vec<WordId>) -> Self {
+        Self {
+            word_ids,
+            result: Default::default(),
+            current: [Default::default(); N],
+        }
     }
 
-    ret.into_iter()
-        .map(|set| {
-            set.into_iter()
-                .collect::<Vec<_>>()
-                .try_into()
-                .expect("must_have {N}")
-        })
-        .collect()
+    pub fn search(mut self) -> Vec<[WordId; N]> {
+        self.search_helper(0, 0);
+        // self.search_helper_2();
+        self.result
+    }
+
+    fn search_helper_2(&mut self) {
+        struct SearchState {
+            start_index: usize,
+            depth: usize,
+        }
+
+        let mut stack: Vec<SearchState> = vec![SearchState {
+            start_index: 0,
+            depth: 0,
+        }];
+
+        while !stack.is_empty() {
+            let SearchState { start_index, depth } = stack.pop().expect("The stack is not empty");
+            for j in start_index..=self.word_ids.len() - (N - depth) {
+                let x = &mut self.current;
+                x[depth] = self.word_ids[j];
+                if Self::is_clique_of_size(x, depth + 1) {
+                    if depth < N - 1 {
+                        stack.push(SearchState {
+                            start_index: j + 1,
+                            depth: depth,
+                        });
+                        stack.push(SearchState {
+                            start_index: j + 1,
+                            depth: depth + 1,
+                        });
+                        break;
+                    } else {
+                        self.result.push(x.clone());
+                    }
+                }
+            }
+        }
+    }
+
+    fn search_helper(&mut self, start_index: usize, depth: usize) {
+        // Check if any vertices can be inserted
+        let rep = self
+            .current
+            .iter()
+            .take(depth)
+            .fold(0_u32, |a, &word_id| (a | *word_id));
+
+        for j in start_index..=self.word_ids.len() - (N - depth) {
+            if rep & *self.word_ids[j] == 0 {
+                self.current[depth] = self.word_ids[j];
+                if depth < N - 1 {
+                    self.search_helper(j + 1, depth + 1);
+                } else {
+                    self.result.push(self.current.clone());
+                }
+            }
+        }
+    }
+
+    pub fn is_clique(set: &[WordId; N]) -> bool {
+        Self::is_clique_of_size(set, N)
+    }
+
+    pub fn is_clique_of_size(set: &[WordId; N], n: usize) -> bool {
+        set.iter()
+            .take(n)
+            .combinations(2)
+            .all(|combo| **combo[0] & **combo[1] == 0)
+    }
 }
 
 // TODO: generalize over N,M
 // TODO: rename
-pub fn wordle_55<'a>(
-    words: impl IntoIterator<Item = &'a str>,
-    //TODO: -> impl IntoIterator<Item = [&'a str; 5]>
-) -> impl IntoIterator<Item = [String; 5]> {
-    // TODO: replace with id to words
+/// NOTE: Must be 5-letter words
+pub fn find_words_with_disjoint_character_sets<'a, const N: usize, const L: u32>(
+    words: Vec<&'a str>,
+    //TODO: -> Vec<[&'a str; N]>
+) -> BTreeSet<[String; N]> {
     let word_map = IdToWordsMap::from_iter(words);
-    let cliques = find_cliques::<5>(&word_map.keys().into_iter().cloned().collect());
+    let cliques = CliqueFinder::new(
+        //TODO: move to IdToWordsMap.get_ids_with_n_distinct_letters()
+        word_map
+            .keys()
+            .into_iter()
+            .filter(|word_id| word_id.count_ones() == L)
+            .cloned()
+            .collect(),
+    )
+    .search();
     construct_result(word_map, cliques)
 }
 
@@ -121,28 +142,65 @@ fn construct_result<const N: usize>(
 // TODO: move tests to submodules
 #[cfg(test)]
 mod tests {
+    use std::fs;
 
-    use std::collections::BTreeSet;
-
-    use crate::{id_to_words_map::IdToWordsMap, wordle_55, WordGraph, WordId};
+    use crate::{find_words_with_disjoint_character_sets, CliqueFinder, WordId};
 
     #[test]
     fn wordle_has_538_cliques_of_disjoint_words() {
-        use std::fs;
+        let file_contents = fs::read_to_string("res/words.txt").unwrap();
+        let words: Vec<_> = file_contents.split_whitespace().collect();
+        let wordle_words = find_words_with_disjoint_character_sets::<5, 5>(words);
 
-        let foo = fs::read_to_string("res/words.txt").unwrap();
-        let words: Vec<_> = foo
-            .split(char::is_whitespace)
-            .filter(|&word| BTreeSet::from_iter(word.as_bytes()).len() == 5)
-            .collect();
+        for word_set in wordle_words.iter() {
+            println!("{word_set:?}");
+        }
 
-        // let wordle_words = wordle_55(words).into_iter().collect::<Vec<_>>();
+        assert_eq!(
+            wordle_words.len(),
+            538,
+            "Matt Parker is a better programmer than I 😢"
+        );
+    }
 
-        // assert_eq!(
-        //     wordle_words.len(),
-        //     538,
-        //     "Matt Parker is a better programmer than I 😢"
-        // );
+    #[test]
+    fn wordle_answers() {
+        let file_contents = fs::read_to_string("res/answers.txt").unwrap();
+        let words: Vec<_> = file_contents.split_whitespace().collect();
+        let wordle_words = find_words_with_disjoint_character_sets::<5, 5>(words);
+
+        for word_set in wordle_words.iter() {
+            println!("{word_set:?}");
+        }
+
+        assert_eq!(
+            wordle_words.len(),
+            0,
+            "Matt Parker is a better programmer than I 😢"
+        );
+    }
+
+    #[test]
+    fn is_clique() {
+        assert!(CliqueFinder::is_clique(&[WordId::from("abcde")]));
+        assert!(CliqueFinder::is_clique(&[
+            WordId::from("abcde"),
+            WordId::default(),
+            WordId::default(),
+            WordId::default(),
+            WordId::default(),
+        ]));
+        assert!(CliqueFinder::is_clique(&[
+            WordId::from("abcde"),
+            WordId::from("fghij"),
+            WordId::from("klmno"),
+            WordId::from("pqrst"),
+            WordId::from("uvwxy"),
+        ]));
+        assert!(!CliqueFinder::is_clique(&[
+            WordId::from("abcde"),
+            WordId::from("wxzya"),
+        ]),);
     }
 
     #[test]
@@ -152,27 +210,6 @@ mod tests {
         assert_eq!(*WordId::from("abcdf"), 0b00001_01111);
     }
 
-    #[test]
-    fn word_graph_simple() {
-        let test_words = vec![
-            "abcde",
-            // 0b0_00000_00000_00000_00000_11111
-            // "abcde" -> ["zlmno"]
-            "awxyz",
-            // 0b1_11100_00000_00000_00000_00001
-            // "awxyz" -> []
-            "zlmno",
-            // 0b1_00000_00000_01110_00000_00000
-            // "zlmno" -> ["abcde"]
-        ];
-        let id_to_words_map = IdToWordsMap::from_iter(test_words);
-        let word_graph = WordGraph::new(id_to_words_map.keys().cloned());
-
-        assert_eq!(word_graph["abcde"].len(), 1, "abcde");
-        assert_eq!(word_graph["awxyz"].len(), 0, "awxyz");
-        assert_eq!(word_graph["zlmno"].len(), 1, "zlmno");
-    }
-
     mod single_5_clique {
         use super::*;
 
@@ -180,16 +217,7 @@ mod tests {
 
         #[test]
         fn word_graph_with_5_clique() {
-            let id_to_words_map = IdToWordsMap::from_iter(WORDS);
-            let word_graph = WordGraph::new(id_to_words_map.keys().cloned());
-
-            assert_eq!(word_graph["abcde"].len(), 4, "abcde");
-            assert_eq!(word_graph["fghij"].len(), 4, "fghij");
-            assert_eq!(word_graph["klmno"].len(), 4, "klmno");
-            assert_eq!(word_graph["pqrst"].len(), 4, "pqrst");
-            assert_eq!(word_graph["uvwxy"].len(), 4, "uvwxy");
-
-            let cliques: Vec<_> = wordle_55(WORDS).into_iter().collect();
+            let cliques = find_words_with_disjoint_character_sets::<5, 5>(WORDS.to_vec());
             assert_eq!(cliques.len(), 1)
         }
     }

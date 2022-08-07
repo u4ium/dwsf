@@ -1,6 +1,8 @@
 // each word fits into a u32 BitSet?
 
-use std::ops::Deref;
+use std::{fmt::Display, ops::Deref};
+
+use itertools::Itertools;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct WordId(u32);
@@ -20,5 +22,24 @@ impl Deref for WordId {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl Display for WordId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            (0..32)
+                .map(|i| {
+                    if self.0 & 1 << i != 0 {
+                        Some(('a' as u8 + i) as char)
+                    } else {
+                        None
+                    }
+                })
+                .flatten()
+                .join("")
+        )
     }
 }
