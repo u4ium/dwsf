@@ -30,7 +30,7 @@ impl<const N: usize> CliqueFinder<N> {
             .fold(0_u32, |a, &word_id| (a | *word_id));
 
         for j in start_index..=self.word_ids.len() - (N - depth) {
-            if rep & *self.word_ids[j] == 0 {
+            if (rep & *self.word_ids[j]) == 0 {
                 // this word can be added to the bitset without letter intersections
                 self.current[depth] = self.word_ids[j];
                 if depth + 1 == N {

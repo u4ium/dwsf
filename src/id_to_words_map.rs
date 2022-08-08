@@ -10,7 +10,8 @@ impl<'a> FromIterator<&'a str> for IdToWordsMap<'a> {
         I: IntoIterator<Item = &'a str>,
     {
         Self(words.into_iter().fold(BTreeMap::new(), |mut m, word| {
-            m.entry(WordId::from(word)).or_default().push(word);
+            let id = WordId::from(word);
+            m.entry(id).or_default().push(word);
             m
         }))
     }

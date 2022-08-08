@@ -11,35 +11,32 @@ use clique_finder::CliqueFinder;
 pub fn find_words_with_disjoint_character_sets<'a, const N: usize, const L: u32>(
     words: Vec<&'a str>,
     //TODO: -> Vec<[&'a str; N]>
-) -> Vec<[String; N]> {
+) -> Vec<[&'a str; N]> {
+    let words: Vec<_> = words
+        .into_iter()
+        .filter(|&word| WordId::from(word).count_ones() == L)
+        .collect();
     let word_map = IdToWordsMap::from_iter(words);
-    let cliques = CliqueFinder::new(
-        //TODO: move to IdToWordsMap.get_ids_with_n_distinct_letters()
-        word_map
-            .keys()
-            .into_iter()
-            .filter(|word_id| word_id.count_ones() == L)
-            .cloned()
-            .collect(),
-    )
-    .search();
+    let word_ids = word_map.keys().cloned().collect();
+    let cliques = CliqueFinder::new(word_ids).search();
     construct_result(word_map, cliques)
 }
 
 // TODO: test
 // TODO: rename/move
 // TODO: needs L=5? (string length)
-fn construct_result<const N: usize>(
-    word_map: IdToWordsMap,
+// TODO: don't reallocate Strings
+fn construct_result<'a, const N: usize>(
+    word_map: IdToWordsMap<'a>,
     cliques: Vec<[WordId; N]>,
-) -> Vec<[String; N]> {
+) -> Vec<[&'a str; N]> {
     cliques
         .iter()
         .map(|clique| {
             clique
                 .into_iter()
                 .flat_map(|cq| &word_map[cq])
-                .map(|&s| s.to_owned())
+                .cloned()
                 .combinations(N)
                 .map(|c| c.try_into().expect("must have {N}"))
                 .collect::<Vec<_>>()
@@ -56,7 +53,7 @@ mod tests {
 
     #[test]
     fn wordle_has_538_cliques_of_disjoint_words() {
-        let file_contents = fs::read_to_string("res/words.txt").unwrap();
+        let file_contents = fs::read_to_string("res/all_words_5.txt").unwrap();
         let words: Vec<_> = file_contents.split_whitespace().collect();
         let wordle_words = find_words_with_disjoint_character_sets::<5, 5>(words);
 
@@ -66,7 +63,7 @@ mod tests {
 
         assert_eq!(
             wordle_words.len(),
-            15,
+            538,
             "Matt Parker is a better programmer than I 😢"
         );
     }
