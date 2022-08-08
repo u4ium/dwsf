@@ -14,7 +14,7 @@ pub fn main() -> Result<(), String> {
     let result = find_words_with_disjoint_character_sets::<5, 5>(input);
 
     for set in result {
-        println!("{set:?}");
+        println!("{}", set.join(","));
     }
 
     Ok(())

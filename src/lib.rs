@@ -30,6 +30,15 @@ fn construct_result<'a, const N: usize>(
     word_map: IdToWordsMap<'a>,
     cliques: Vec<[WordId; N]>,
 ) -> Vec<[&'a str; N]> {
+    // TODO refactor to avoid filter and produce combinations in smarter way
+    // for clique in cliques {
+    //     for i in 0..N {
+    //         for word in word_map[&clique[i]] {
+    //             // add to ret
+    //         }
+    //     }
+    // }
+
     cliques
         .iter()
         .map(|clique| {
@@ -38,11 +47,27 @@ fn construct_result<'a, const N: usize>(
                 .flat_map(|cq| &word_map[cq])
                 .cloned()
                 .combinations(N)
+                .filter(is_clique)
                 .map(|c| c.try_into().expect("must have {N}"))
                 .collect::<Vec<_>>()
         })
         .flatten()
         .collect()
+}
+
+fn is_clique(word_set: &Vec<&str>) -> bool {
+    let mut mask = 0_u32;
+    for &word in word_set {
+        let word_id = WordId::from(word);
+
+        if mask & *word_id != 0 {
+            return false;
+        }
+
+        mask |= *word_id;
+    }
+
+    true
 }
 
 #[cfg(test)]
@@ -52,7 +77,7 @@ mod tests {
     use crate::find_words_with_disjoint_character_sets;
 
     #[test]
-    fn wordle_has_538_cliques_of_disjoint_words() {
+    fn wordle_has_831_cliques_of_disjoint_words() {
         let file_contents = fs::read_to_string("res/all_words_5.txt").unwrap();
         let words: Vec<_> = file_contents.split_whitespace().collect();
         let wordle_words = find_words_with_disjoint_character_sets::<5, 5>(words);
@@ -63,7 +88,7 @@ mod tests {
 
         assert_eq!(
             wordle_words.len(),
-            538,
+            831,
             "Matt Parker is a better programmer than I 😢"
         );
     }

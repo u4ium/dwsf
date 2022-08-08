@@ -22,6 +22,12 @@ impl<const N: usize> CliqueFinder<N> {
     }
 
     fn search_helper(&mut self, start_index: usize, depth: usize) {
+        if depth == N {
+            // current is a complete N-clique, so add it to the result buffer
+            self.result.push(self.current.clone());
+            return;
+        }
+
         // collect the current clique into a single bitset for fast intersection tests
         let rep = self
             .current
@@ -29,18 +35,14 @@ impl<const N: usize> CliqueFinder<N> {
             .take(depth)
             .fold(0_u32, |a, &word_id| (a | *word_id));
 
+        // current is a (k-1)-clique, where k<N,
+        // so find all possible k-cliques containing current
         for j in start_index..=self.word_ids.len() - (N - depth) {
-            if (rep & *self.word_ids[j]) == 0 {
+            let word_id = self.word_ids[j];
+            if (rep & *word_id) == 0 {
                 // this word can be added to the bitset without letter intersections
-                self.current[depth] = self.word_ids[j];
-                if depth + 1 == N {
-                    // current is a complete N-clique, so add it to the result buffer
-                    self.result.push(self.current.clone());
-                } else {
-                    // current is a k-clique, where k<N,
-                    // so recurse to find all possible (k+1)th words
-                    self.search_helper(j + 1, depth + 1);
-                }
+                self.current[depth] = word_id;
+                self.search_helper(j + 1, depth + 1);
             }
         }
     }
