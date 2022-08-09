@@ -1,11 +1,11 @@
-use itertools::Itertools;
-
 mod word_id;
 use word_id::WordId;
 mod id_to_words_map;
 use id_to_words_map::IdToWordsMap;
 mod clique_finder;
 use clique_finder::CliqueFinder;
+mod anagram_finder;
+use anagram_finder::AnagramFinder;
 
 /// Find sets of N words (each with L distinct characters) that share no characters between them
 pub fn find_words_with_disjoint_character_sets<'a, const N: usize, const L: u32>(
@@ -19,55 +19,7 @@ pub fn find_words_with_disjoint_character_sets<'a, const N: usize, const L: u32>
     let word_map = IdToWordsMap::from_iter(words);
     let word_ids = word_map.keys().cloned().collect();
     let cliques = CliqueFinder::new(word_ids).search();
-    construct_result(word_map, cliques)
-}
-
-// TODO: test
-// TODO: rename/move
-// TODO: needs L=5? (string length)
-// TODO: don't reallocate Strings
-fn construct_result<'a, const N: usize>(
-    word_map: IdToWordsMap<'a>,
-    cliques: Vec<[WordId; N]>,
-) -> Vec<[&'a str; N]> {
-    // TODO refactor to avoid filter and produce combinations in smarter way
-    // for clique in cliques {
-    //     for i in 0..N {
-    //         for word in word_map[&clique[i]] {
-    //             // add to ret
-    //         }
-    //     }
-    // }
-
-    cliques
-        .iter()
-        .map(|clique| {
-            clique
-                .into_iter()
-                .flat_map(|cq| &word_map[cq])
-                .cloned()
-                .combinations(N)
-                .filter(is_clique)
-                .map(|c| c.try_into().expect("must have {N}"))
-                .collect::<Vec<_>>()
-        })
-        .flatten()
-        .collect()
-}
-
-fn is_clique(word_set: &Vec<&str>) -> bool {
-    let mut mask = 0_u32;
-    for &word in word_set {
-        let word_id = WordId::from(word);
-
-        if mask & *word_id != 0 {
-            return false;
-        }
-
-        mask |= *word_id;
-    }
-
-    true
+    AnagramFinder::new(word_map).find(&cliques)
 }
 
 #[cfg(test)]
@@ -82,10 +34,6 @@ mod tests {
         let words: Vec<_> = file_contents.split_whitespace().collect();
         let wordle_words = find_words_with_disjoint_character_sets::<5, 5>(words);
 
-        for word_set in wordle_words.iter() {
-            println!("{word_set:?}");
-        }
-
         assert_eq!(
             wordle_words.len(),
             831,
@@ -98,10 +46,6 @@ mod tests {
         let file_contents = fs::read_to_string("res/answers.txt").unwrap();
         let words: Vec<_> = file_contents.split_whitespace().collect();
         let wordle_words = find_words_with_disjoint_character_sets::<5, 5>(words);
-
-        for word_set in wordle_words.iter() {
-            println!("{word_set:?}");
-        }
 
         assert_eq!(
             wordle_words.len(),

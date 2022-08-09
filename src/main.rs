@@ -10,7 +10,7 @@ pub fn main() -> Result<(), String> {
 
     let input = parse_input(&buffer)?;
 
-    // TODO: take command-line args for 5,5
+    // TODO: take command-line args for <5, 5>
     let result = find_words_with_disjoint_character_sets::<5, 5>(input);
 
     for set in result {
