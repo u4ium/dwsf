@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, ops::Deref};
 
-use crate::word_id::WordId;
+use crate::modules::word_id::WordId;
 
 pub struct IdToWordsMap<'a>(BTreeMap<WordId, Vec<&'a str>>);
 
