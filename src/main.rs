@@ -1,41 +1,51 @@
-use std::io::stdin;
+use std::{
+    fs,
+    io::{stdin, BufRead, BufReader},
+};
 
 use clap::Parser;
 
 use itertools::Itertools;
-use wordle55::find_words_with_disjoint_character_sets;
+
+use disjoint_word_set_finder::find_words_with_disjoint_character_sets;
 
 #[derive(Parser)]
-#[clap(author, version, about, long_about = None)]
+#[clap(version, about)]
 struct Cli {
-    /// Size of clique to search for
+    /// Size of set to search for
     #[clap(short, long, value_parser)]
-    num_words_per_clique: usize,
+    num_words_per_set: usize,
 
     /// Size of word to search for
     #[clap(short, long, value_parser)]
     length_of_word: usize,
 
-    /// Allow for word lengths that exceed length_of_word in length
+    /// Allow for word lengths that exceed `length_of_word`
     #[clap(short, long, action)]
     allow_repeat_letters: bool,
+
+    /// An optional path to the word list file
+    /// (otherwise read from stdin)
+    #[clap(value_parser)]
+    word_file_path: Option<String>,
 }
 
 pub fn main() -> Result<(), String> {
     let Cli {
-        num_words_per_clique,
+        num_words_per_set,
         length_of_word,
         allow_repeat_letters,
+        word_file_path,
     } = Cli::parse();
-    let finder = get_finder(num_words_per_clique, length_of_word)?;
+    let finder = get_finder(num_words_per_set, length_of_word)?;
 
-    let i = get_input(if !allow_repeat_letters {
+    let letter_restriction = if !allow_repeat_letters {
         Some(length_of_word)
     } else {
         None
-    })?;
-
-    let input = i.iter().map(|w| &w[..]).collect_vec();
+    };
+    let words = get_input(word_file_path, letter_restriction)?;
+    let input = words.iter().map(String::as_str).collect_vec();
 
     for set in finder(input) {
         println!("{}", set.join(","));
@@ -44,10 +54,19 @@ pub fn main() -> Result<(), String> {
     Ok(())
 }
 
-fn get_input<'a>(letter_restriction: Option<usize>) -> Result<Vec<String>, String> {
-    let mut ret = vec![];
+fn get_input<'a>(
+    word_file_path: Option<String>,
+    letter_restriction: Option<usize>,
+) -> Result<Vec<String>, String> {
+    let reader: Box<dyn BufRead> = match word_file_path {
+        None => Box::new(BufReader::new(stdin())),
+        Some(filename) => Box::new(BufReader::new(
+            fs::File::open(filename).map_err(|e| e.to_string())?,
+        )),
+    };
 
-    for (i, line) in stdin().lines().enumerate() {
+    let mut ret = vec![];
+    for (i, line) in reader.lines().enumerate() {
         let word = line.map_err(|e| e.to_string())?;
 
         if !word.as_bytes().into_iter().all(u8::is_ascii_alphabetic) {
@@ -57,9 +76,7 @@ fn get_input<'a>(letter_restriction: Option<usize>) -> Result<Vec<String>, Strin
         if let Some(expected_length_of_word) = letter_restriction {
             let length_of_word = word.len();
             if expected_length_of_word != length_of_word {
-                return Err(
-                    format! {"word {i} has length not equal to {expected_length_of_word}: {length_of_word}"},
-                );
+                continue;
             }
         }
 
@@ -69,76 +86,36 @@ fn get_input<'a>(letter_restriction: Option<usize>) -> Result<Vec<String>, Strin
     Ok(ret)
 }
 
-// TODO: macro
 fn get_finder(
-    num_words_per_clique: usize,
+    num_words_per_set: usize,
     length_of_word: usize,
 ) -> Result<&'static dyn for<'a> Fn(Vec<&'a str>) -> Vec<Vec<&'a str>>, String> {
-    Ok(match (num_words_per_clique, length_of_word) {
-        (2, 13) => &|words| {
-            find_words_with_disjoint_character_sets::<2, 13>(words)
+    // TODO: avoid reallocating vectors
+    fn finder_wrapper<const N: usize, const L: u32>(
+    ) -> &'static dyn for<'a> Fn(Vec<&'a str>) -> Vec<Vec<&'a str>> {
+        &|words| {
+            find_words_with_disjoint_character_sets::<N, L>(words)
                 .iter()
                 .map(|set| set.to_vec())
                 .collect()
-        },
-        (2, 12) => &|words| {
-            find_words_with_disjoint_character_sets::<2, 12>(words)
-                .iter()
-                .map(|set| set.to_vec())
-                .collect()
-        },
-        (2, 11) => &|words| {
-            find_words_with_disjoint_character_sets::<2, 11>(words)
-                .iter()
-                .map(|set| set.to_vec())
-                .collect()
-        },
-        (2, 10) => &|words| {
-            find_words_with_disjoint_character_sets::<2, 10>(words)
-                .iter()
-                .map(|set| set.to_vec())
-                .collect()
-        },
-        (2, 9) => &|words| {
-            find_words_with_disjoint_character_sets::<2, 9>(words)
-                .iter()
-                .map(|set| set.to_vec())
-                .collect()
-        },
-        (3, 8) => &|words| {
-            find_words_with_disjoint_character_sets::<3, 8>(words)
-                .iter()
-                .map(|set| set.to_vec())
-                .collect()
-        },
-        (4, 6) => &|words| {
-            find_words_with_disjoint_character_sets::<4, 6>(words)
-                .iter()
-                .map(|set| set.to_vec())
-                .collect()
-        },
-        (5, 5) => &|words| {
-            find_words_with_disjoint_character_sets::<5, 5>(words)
-                .iter()
-                .map(|set| set.to_vec())
-                .collect()
-        },
-        (6, 4) => &|words| {
-            find_words_with_disjoint_character_sets::<6, 4>(words)
-                .iter()
-                .map(|set| set.to_vec())
-                .collect()
-        },
-        (7, 3) => &|words| {
-            find_words_with_disjoint_character_sets::<7, 3>(words)
-                .iter()
-                .map(|set| set.to_vec())
-                .collect()
-        },
+        }
+    }
+
+    // TODO: macro
+    Ok(match (num_words_per_set, length_of_word) {
+        (2, 13) => finder_wrapper::<2, 13>(),
+        (2, 12) => finder_wrapper::<2, 12>(),
+        (2, 11) => finder_wrapper::<2, 11>(),
+        (2, 10) => finder_wrapper::<2, 10>(),
+        (2, 9) => finder_wrapper::<2, 9>(),
+        (3, 8) => finder_wrapper::<3, 8>(),
+        (4, 6) => finder_wrapper::<4, 6>(),
+        (5, 5) => finder_wrapper::<5, 5>(),
+        (6, 4) => finder_wrapper::<6, 4>(),
         _ => {
             return Err(format!(
-                "Unsupported clique and word size combination: {num_words_per_clique}, {length_of_word}"
-            ))
+            "Unsupported clique and word size combination: {num_words_per_set}, {length_of_word}"
+        ))
         }
     })
 }

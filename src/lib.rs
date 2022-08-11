@@ -4,7 +4,6 @@ use modules::*;
 /// Find sets of N words (each with L distinct characters) that share no characters between them
 pub fn find_words_with_disjoint_character_sets<'a, const N: usize, const L: u32>(
     words: Vec<&'a str>,
-    //TODO: -> Vec<[&'a str; N]>
 ) -> Vec<[&'a str; N]> {
     // TODO: move into IdToWordsMap Constructor, generalize over IsFixedLength (L or None)
     let words: Vec<_> = words
@@ -28,10 +27,10 @@ mod tests {
     fn wordle_has_831_cliques_of_disjoint_words() {
         let file_contents = fs::read_to_string("res/all_words_5.txt").unwrap();
         let words: Vec<_> = file_contents.split_whitespace().collect();
-        let wordle_words = find_words_with_disjoint_character_sets::<5, 5>(words);
+        let cliques = find_words_with_disjoint_character_sets::<5, 5>(words);
 
         assert_eq!(
-            wordle_words.len(),
+            cliques.len(),
             831,
             "Matt Parker is a better programmer than I 😢"
         );

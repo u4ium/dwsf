@@ -1,7 +1,6 @@
 use crate::{modules::id_to_words_map::IdToWordsMap, modules::word_id::WordId};
 
 // TODO: test
-// TODO: rename/move
 // TODO: needs L=5? (string length)
 pub struct AnagramFinder<'a, const N: usize> {
     word_map: IdToWordsMap<'a>,

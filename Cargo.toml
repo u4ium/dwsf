@@ -1,8 +1,16 @@
+cargo-features = ["different-binary-name"]
+
 [package]
-name = "wordle55"
+name = "disjoint_word_set_finder"
+description="Find sets of n words, that do not share characters, from a given list of words with length l"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 clap = { version = "3.2.16", features = ["derive"] }
 itertools = "0.10.3"
+
+[[bin]]
+name = "disjoint_word_set_finder"
+filename = "dwsf"
+path = "src/main.rs"

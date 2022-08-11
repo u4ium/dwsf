@@ -18,6 +18,9 @@ impl<const N: usize> CliqueFinder<N> {
 
     #[inline]
     pub fn search(mut self) -> Vec<[WordId; N]> {
+        if N > self.word_ids.len() {
+            return self.result;
+        }
         self.search_helper(0, 0, 0);
         self.result
     }
