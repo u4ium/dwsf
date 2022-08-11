@@ -38,19 +38,6 @@ mod tests {
     }
 
     #[test]
-    fn wordle_answers() {
-        let file_contents = fs::read_to_string("res/answers.txt").unwrap();
-        let words: Vec<_> = file_contents.split_whitespace().collect();
-        let wordle_words = find_words_with_disjoint_character_sets::<5, 5>(words);
-
-        assert_eq!(
-            wordle_words.len(),
-            0,
-            "Matt Parker is a better programmer than I 😢"
-        );
-    }
-
-    #[test]
     fn word_graph_with_5_clique() {
         let words = vec!["abcde", "fghij", "klmno", "pqrst", "uvwxy"];
         let cliques = find_words_with_disjoint_character_sets::<5, 5>(words);
