@@ -3,7 +3,7 @@ cargo-features = ["different-binary-name"]
 [package]
 name = "disjoint_word_set_finder"
 description="Find sets of n words, that do not share characters, from a given list of words with length l"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 
 [dependencies]
