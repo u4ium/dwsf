@@ -8,7 +8,6 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "3.2.16", features = ["derive"] }
-itertools = "0.10.3"
 
 [[bin]]
 name = "disjoint_word_set_finder"

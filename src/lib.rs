@@ -25,8 +25,11 @@ mod tests {
     #[test]
     #[ignore = "slow"]
     fn wordle_has_831_cliques_of_disjoint_words() {
-        let file_contents = fs::read_to_string("res/all_words_5.txt").unwrap();
-        let words: Vec<_> = file_contents.split_whitespace().collect();
+        let file_contents = fs::read_to_string("res/all_words.txt").unwrap();
+        let words: Vec<_> = file_contents
+            .split_whitespace()
+            .filter(|word| word.len() == 5)
+            .collect();
         let cliques = find_words_with_disjoint_character_sets::<5, 5>(words);
 
         assert_eq!(

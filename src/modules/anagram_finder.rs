@@ -1,7 +1,5 @@
 use crate::{modules::id_to_words_map::IdToWordsMap, modules::word_id::WordId};
 
-// TODO: test
-// TODO: needs L=5? (string length)
 pub struct AnagramFinder<'a, const N: usize> {
     word_map: IdToWordsMap<'a>,
     result: Vec<[&'a str; N]>,
@@ -37,3 +35,5 @@ impl<'a, const N: usize> AnagramFinder<'a, N> {
         }
     }
 }
+
+// TODO: test

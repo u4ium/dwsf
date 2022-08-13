@@ -5,8 +5,6 @@ use std::{
 
 use clap::Parser;
 
-use itertools::Itertools;
-
 use disjoint_word_set_finder::find_words_with_disjoint_character_sets;
 
 #[derive(Parser)]
@@ -39,13 +37,17 @@ pub fn main() -> Result<(), String> {
     } = Cli::parse();
     let finder = get_finder(num_words_per_set, length_of_word)?;
 
-    let letter_restriction = if !allow_repeat_letters {
+    let length_restriction = if !allow_repeat_letters {
         Some(length_of_word)
     } else {
         None
     };
-    let words = get_input(word_file_path, letter_restriction)?;
-    let input = words.iter().map(String::as_str).collect_vec();
+    let words = get_input(word_file_path, length_restriction)?;
+    let input = words
+        .iter()
+        .filter(|s| s.len() >= length_of_word)
+        .map(String::as_str)
+        .collect::<Vec<_>>();
 
     for set in finder(input) {
         println!("{}", set.join(","));
@@ -56,7 +58,7 @@ pub fn main() -> Result<(), String> {
 
 fn get_input<'a>(
     word_file_path: Option<String>,
-    letter_restriction: Option<usize>,
+    length_restriction: Option<usize>,
 ) -> Result<Vec<String>, String> {
     let reader: Box<dyn BufRead> = match word_file_path {
         None => Box::new(BufReader::new(stdin())),
@@ -69,14 +71,21 @@ fn get_input<'a>(
     for (i, line) in reader.lines().enumerate() {
         let word = line.map_err(|e| e.to_string())?;
 
-        if !word.as_bytes().into_iter().all(u8::is_ascii_alphabetic) {
-            return Err(format! {"word {i} has non-letter characters: {word}"});
+        // If the word is NOT alphabetic ASCII, reject with ERROR
+        {
+            let is_alphabetic = word.as_bytes().iter().all(u8::is_ascii_alphabetic);
+            if !is_alphabetic {
+                let index = i + 1;
+                return Err(format! {"Word {index} has non-letter characters: {word}"});
+            }
         }
 
-        if let Some(expected_length_of_word) = letter_restriction {
-            let length_of_word = word.len();
-            if expected_length_of_word != length_of_word {
-                continue;
+        // If length is restricted AND the word is NOT the correct length, SKIP it
+        {
+            if let Some(expected_length_of_word) = length_restriction {
+                if expected_length_of_word != word.len() {
+                    continue;
+                }
             }
         }
 
